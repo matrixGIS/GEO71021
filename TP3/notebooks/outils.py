@@ -73,6 +73,15 @@ import re as _re
 def _mmjj(v):
     return isinstance(v, str) and _re.fullmatch(r"(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])", v) is not None
 
+def _intervalles(v):
+    """dict non vide {nom: ("AAAA-MM-JJ", "AAAA-MM-JJ")}, début < fin, dans la période couverte (2004-09-12 → 2026-09-11)."""
+    if not isinstance(v, dict) or not v: return False
+    for deb, fin in v.values():
+        try: d, f = pd.Timestamp(deb), pd.Timestamp(fin)
+        except Exception: return False
+        if not (pd.Timestamp("2004-09-12") <= d < f <= pd.Timestamp("2026-09-11")): return False
+    return True
+
 # règle de validation et texte d'aide pour chaque paramètre
 CHOIX = {
     "VARIABLE": (lambda v: v in ["temp_surface_sol_C", "temp_sol_C", "hr_pct", "vent_vit_ms"],
@@ -91,6 +100,8 @@ CHOIX = {
     "IMAX_PLAUSIBLE": (lambda v: v == "aucun" or (isinstance(v, (int, float)) and v > 0), 'un nombre positif (mm) ou "aucun"'),
     "DEBUT_REFERENCE": (lambda v: isinstance(v, int) and 2004 <= v <= 2015, "une année entière entre 2004 et 2015"),
     "TEST_TAUX": (lambda v: v in ["poisson", "mann-whitney"], '"poisson" ou "mann-whitney"'),
+    "INTERVALLES": (_intervalles, 'un dictionnaire {"nom": ("AAAA-MM-JJ", "AAAA-MM-JJ"), ...}, début avant fin, '
+                                  'dates entre le 2004-09-12 et le 2026-09-11'),
 }
 CHOIX["COMPLETUDE"], CHOIX["MIT"] = CHOIX["COUVERTURE"], CHOIX["SEC"]     # anciens noms, toujours acceptés
 
@@ -119,3 +130,16 @@ def mann_kendall(serie, test):
          "saisonnier": lambda x: mk.seasonal_test(x, period=12),
          "saisonnier_correle": lambda x: mk.correlated_seasonal_test(x, period=12)}[test]
     return f(serie.values)
+
+
+# ---------------------------------------------------------------- dates lisibles
+MOIS_FR = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"]
+
+def date_fr(x):
+    """Date en toutes lettres (« 1er avril ») à partir d'une date, d'un jour de l'année ou d'un texte "mm-jj"."""
+    if isinstance(x, str):
+        if x == "pic": return "pic"
+        x = pd.Timestamp(f"2001-{x}")
+    elif not isinstance(x, pd.Timestamp):
+        x = pd.Timestamp("2001-01-01") + pd.Timedelta(days=round(float(x)) - 1)   # jour de l'année (année non bissextile)
+    return f"{'1er' if x.day == 1 else x.day} {MOIS_FR[x.month - 1]}"
