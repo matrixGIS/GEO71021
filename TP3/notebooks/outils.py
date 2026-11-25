@@ -1,5 +1,4 @@
-"""Fonctions utilitaires du laboratoire « séries temporelles ».
-Les étudiants n'ont pas à modifier ce fichier : il cache la plomberie pour garder les notebooks courts."""
+"""NE PAS MODIFIER CE FICHIER. IL CONTIENT LES FONCTIONS QUI SONT UTILISÉES DANS LES NOTEBOOKS."""
 from pathlib import Path
 import numpy as np, pandas as pd, matplotlib.pyplot as plt
 
